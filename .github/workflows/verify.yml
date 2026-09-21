@@ -1,0 +1,31 @@
+name: verify
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Canonical bundle matches the manifest
+        run: node tools/verify-manifest.mjs
+      - name: Publish gate clears the canonical bundle
+        run: node tools/verify-before-publish.mjs artifact/sunstone-v0.14.CANONICAL.html
+      - name: Publish gate blocks an older build
+        run: |
+          set +e
+          sed 's/"0\.14\.0-artifact"/"0.7.0-artifact"/' \
+            artifact/sunstone-v0.14.CANONICAL.html > /tmp/synthetic-v0.7.html
+          node tools/verify-before-publish.mjs /tmp/synthetic-v0.7.html
+          rc=$?
+          if [ "$rc" -eq 0 ]; then
+            echo "gate cleared a 0.7.0 build — it is not protecting the artifact"
+            exit 1
+          fi
+          echo "gate blocked the older build as expected (rc=$rc)"

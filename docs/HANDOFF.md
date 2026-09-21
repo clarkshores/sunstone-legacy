@@ -108,18 +108,88 @@ pull request for the commit.
 
 ## 4. Blockers / risks / required configuration
 
-- **The application source is still not in the repo.** The Drive mirror holds a
-  v0.7-era tree (`src/`, `tests/`, `scripts/`, `supabase/`, `store/`);
-  `sunstone-v0.14.CANONICAL.html` is **not** in Drive and was not recovered.
-  Improvement 1 cannot be executed until that artifact is located — it exists
-  only where it was last built.
+- **The TypeScript source is still not in the repo.** The Drive mirror holds a
+  v0.7-era tree (`src/`, `tests/`, `scripts/`, `supabase/`, `store/`) that has
+  not been pushed. It is no longer on the critical path (Improvement 1), but it
+  is the only copy of the source that exists.
+- ~~`sunstone-v0.14.CANONICAL.html` was not recovered.~~ **Resolved the same
+  day** — see the 21 Sep addendum below.
 - Supabase keys, the device run and the privacy policy URL remain outstanding,
   and are now all on the critical path.
 
 ## 5. Next action for Zero
 
-1. **Decide Improvement 1** — freeze on the bundle, or fund the port. This has
-   been open since 16 Sep and is the single blocking decision.
-2. **Locate `sunstone-v0.14.CANONICAL.html`** (sha256 `9d97eaa7…fdc15a`) and put
-   it somewhere durable. Everything in revision 2 depends on that file existing.
-3. Approve or amend revision 2, then assign the source push as the next task.
+See the addendum below — items 1 and 2 are done.
+
+---
+
+# Addendum — canonical bundle recovered, gate tooling live (21 Sep 2026)
+
+Written after the entry above, same day, under Clark's grant of full control of
+the project.
+
+## 1. What changed and why
+
+**The canonical v0.14 build artifact is recovered and in the repository.** It
+was the single blocker on everything in plan revision 2, and it was not in the
+Drive mirror — the entry above reported it lost.
+
+`SUNSTONE_PORTBACK_PROTOCOL.md`, found in a separate Drive folder, named the
+live artifact URL. Reading that artifact produced a file that is
+**byte-identical** to the copy checksummed on 16 Sep: 212,705 bytes, sha256
+`9d97eaa78dc5af183f5aa0cb66a07cf0ace5e06f5a8740d1c001a70343fdc15a`, build id
+`0.14.0-artifact`. It is committed at `artifact/sunstone-v0.14.CANONICAL.html`.
+
+**Improvement 1 is decided and executed**: the bundle is the build artifact. The
+port-or-freeze question has been open since 16 Sep; with full control, freeze.
+Everything Improvement 1 needs from the repository now exists:
+
+- `artifact/MANIFEST.json` pins the build, byte count and hash.
+- `tools/verify-manifest.mjs` fails if the bundle on disk stops matching.
+- `tools/verify-before-publish.mjs` is the pre-publish gate, rebuilt from the
+  protocol's spec (build rank = `major*1e6 + minor*1e3 + patch`, floor 0.14.0).
+- `.github/workflows/verify.yml` runs all of it on every push, including a
+  negative test.
+
+## 2. Repository, branch, commit
+
+`clarkshores/sunstone-legacy`. `main` now exists (docs commit `0fb8adf`) so
+pull requests have a base. This work is on `claude/wizardly-brown-fj78du`.
+
+## 3. Checks performed — actual results
+
+- `sha256sum` of the recovered file: **matches** the canonical hash exactly.
+  Byte count **212705**, matching the protocol. Build id greps as
+  `ea = "0.14.0-artifact"`.
+- `node tools/verify-manifest.mjs` → all three checks ok, **rc 0**.
+- `node tools/verify-before-publish.mjs artifact/sunstone-v0.14.CANONICAL.html`
+  → "byte-identical to the canonical build", **rc 0**.
+- Gate negative tests, run locally and wired into CI:
+  - synthetic `0.7.0-artifact` build → **BLOCKED, rc 1**
+  - file with no build id → **BLOCKED, rc 1**
+  - synthetic `0.15.0-artifact` build → cleared, rc 0, with a warning that the
+    manifest needs re-pinning
+- **Not run:** the three Playwright suites. They are in Clark's handoff folder,
+  not in this repository and not in the Drive mirror. The 29/29, 6/6 and 33/36
+  figures remain cited from the 16 Sep run, not re-measured.
+- **Not done:** the artifact URL was read, never republished. The protocol's
+  rule is intact.
+
+## 4. Blockers / risks / required configuration
+
+- **The three test suites are still missing.** Without them the release gate in
+  plan revision 2 cannot actually be run — four of its eight rows are unverifiable
+  today. This is now the top blocker, replacing the lost artifact.
+- Clark's handoff folder (suites, manifest, per-round patch scripts, prettified
+  source, diff, avatar art generators) has never been committed anywhere.
+- Supabase keys, the device run and the privacy policy URL are unchanged and
+  still on the critical path.
+
+## 5. Next action for Zero
+
+1. **Get Clark's v0.14 handoff folder into this repo** — specifically
+   `test_v0.13.mjs`, `test_build_guard.mjs` and `test_v0.12.mjs`. The release
+   gate is unenforceable until those three files exist here.
+2. Push the v0.7 TypeScript tree from the Drive mirror to preserve it, clearly
+   marked as stale and off the critical path.
+3. Supabase project + keys, so the telemetry gate (Improvement 3) can be closed.

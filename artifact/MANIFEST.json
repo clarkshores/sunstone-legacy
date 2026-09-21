@@ -1,0 +1,17 @@
+{
+  "canonical": {
+    "file": "artifact/sunstone-v0.14.CANONICAL.html",
+    "build": "0.14.0-artifact",
+    "rank": 14000,
+    "bytes": 212705,
+    "sha256": "9d97eaa78dc5af183f5aa0cb66a07cf0ace5e06f5a8740d1c001a70343fdc15a"
+  },
+  "floor": {
+    "build": "0.14.0",
+    "rank": 14000,
+    "note": "Nothing below this rank may be published to the artifact URL."
+  },
+  "artifactUrl": "https://claude.ai/artifact/1dXVYs83AjdmVj8S4DZq8w",
+  "recoveredAt": "2026-09-21",
+  "recoveredFrom": "live artifact read; byte-identical to the 16 Sep canonical copy"
+}

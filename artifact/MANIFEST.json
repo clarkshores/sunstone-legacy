@@ -13,5 +13,15 @@
   },
   "artifactUrl": "https://claude.ai/artifact/1dXVYs83AjdmVj8S4DZq8w",
   "recoveredAt": "2026-09-21",
-  "recoveredFrom": "live artifact read; byte-identical to the 16 Sep canonical copy"
+  "recoveredFrom": "live artifact read; byte-identical to the 16 Sep canonical copy",
+  "repoBuild": "0.7.0",
+  "rule": "Nothing below build rank 0.14.0 may be published to the artifact URL.",
+  "buildIdLocation": "bundle source, matches /\\bea\\s*=\\s*\"(\\d+)\\.(\\d+)\\.(\\d+)-artifact\"/",
+  "verified": {
+    "test_v0.13.mjs": "29 passed, 0 failed (x3 runs)",
+    "test_build_guard.mjs": "6 passed, 0 failed",
+    "test_v0.12.mjs": "33 of 36; the three retired hold-to-move assertions fail by design",
+    "note": "Cited from the 2026-09-16 run. The suites are not in this repository and these figures have not been re-measured here."
+  },
+  "originalHandoff": "docs/port/original/ (recovered 2026-09-21)"
 }

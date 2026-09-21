@@ -1,0 +1,17 @@
+{
+  "project": "Sunstone Legacy",
+  "canonical_build": "0.14.0-artifact",
+  "canonical_file": "sunstone-v0.14.CANONICAL.html",
+  "canonical_sha256": "9d97eaa78dc5af183f5aa0cb66a07cf0ace5e06f5a8740d1c001a70343fdc15a",
+  "canonical_bytes": 212705,
+  "live_artifact_url": "https://claude.ai/artifact/1dXVYs83AjdmVj8S4DZq8w",
+  "repo_build": "0.7.0",
+  "rule": "Nothing below build rank 0.14.0 may be published to live_artifact_url.",
+  "build_rank": "major*1e6 + minor*1e3 + patch; 0.14.0 = 14000",
+  "build_id_location": "bundle source, matches /ea\\\\s*=\\\\s*\\\"([\\\\d.]+)-artifact\\\"/",
+  "canonical_file_holder": "Clark (downloaded from the Claude session 2026-09-16); not stored in Drive due to size",
+  "verified": {
+    "test_v0.13.mjs": "29 passed, 0 failed (x3 runs)",
+    "test_build_guard.mjs": "6 passed, 0 failed"
+  }
+}

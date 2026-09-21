@@ -26,6 +26,16 @@ The plan's day-26 submission target (Fri 9 Oct) is not reachable while the
 critical path runs through a hand port that nobody has started and that, by its
 own port plan, cannot be mechanically derived for rounds 0.8–0.11.
 
+> **Status, 21 Sep 2026 (same day, later):** Improvement 1 is **decided and
+> executed** — freeze on the bundle. The canonical artifact, reported lost when
+> this revision was written, was recovered from the live artifact URL and is
+> committed at `artifact/sunstone-v0.14.CANONICAL.html`, verified byte-identical
+> (212,705 bytes, sha256 `9d97eaa7…fdc15a`). The manifest, the pre-publish gate
+> and CI enforcement are in the repository and passing. The top blocker is now
+> the three Playwright suites, which exist only in Clark's handoff folder — four
+> rows of the Improvement 2 gate cannot be run without them. See
+> `docs/HANDOFF.md`, addendum of 21 Sep.
+
 ## The four improvements to the end goal
 
 ### 1. The canonical bundle becomes the build artifact; the port leaves the critical path

@@ -6,3 +6,4 @@ ios/
 android/
 *.tsbuildinfo
 .env
+public/

@@ -107,7 +107,11 @@ async function grind({ level, gold, where, route, restAt, label }) {
     const spot = route[laps % route.length];
     await goTo(g, spot[0], spot[1], { tries: 2 });
     if ((await g.scene()) === 'Battle') {
-      await fightBattle(g, { onStuck: (m) => log(`    unrecognised battle menu: ${JSON.stringify(m)}`) });
+      const st2 = await g.state();
+      await fightBattle(g, {
+        debug: st2.level >= 4,
+        onStuck: (m) => log(`    unrecognised battle menu: ${JSON.stringify(m)}`)
+      });
       await drain(g);
     }
     laps++;

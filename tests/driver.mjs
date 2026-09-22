@@ -84,7 +84,7 @@ async function chooseTargetIfPrompted(g, why) {
   return true;
 }
 
-export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {}) {
+export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debug = false } = {}) {
   let unknown = 0;
   for (let r = 0; r < maxRounds; r++) {
     if ((await g.scene()) !== 'Battle') return 'ended';
@@ -95,6 +95,7 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
 
     const st = await g.state();
     const frac = st.hp / st.maxHp;
+    if (debug && r < 5) console.log(`  round ${r}: lvl ${st.level} hp ${st.hp}/${st.maxHp} mp ${st.mp}/${st.maxMp}, menu: ${menu?.slice(0,2).join('/')}`);
 
     // Heal: Mend (110) if badly hurt and affordable, else Heal (35), else item.
     // Only attempt if we have MP to cast; skip entirely if maxMp is 0.

@@ -86,6 +86,8 @@ async function chooseTargetIfPrompted(g, why) {
 
 export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debug = false } = {}) {
   let unknown = 0;
+  let lastMenu = null;
+  let repeatedMenu = 0;
   for (let r = 0; r < maxRounds; r++) {
     if ((await g.scene()) !== 'Battle') return 'ended';
     if (await g.advance()) { await g.wait(80); continue; }
@@ -95,6 +97,23 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debu
 
     const st = await g.state();
     const frac = st.hp / st.maxHp;
+
+    // If the menu hasn't changed in 3 rounds, we're stuck—force pick the first option
+    if (menu.join('/') === lastMenu) {
+      repeatedMenu++;
+      if (repeatedMenu >= 3) {
+        if (debug) console.log(`  stuck menu, forcing first option: ${menu[0]}`);
+        try { await g.pick(menu[0].split(/\s+/)[0]); } catch {}
+        await g.wait(200);
+        repeatedMenu = 0;
+        lastMenu = null;
+        continue;
+      }
+    } else {
+      repeatedMenu = 0;
+    }
+    lastMenu = menu.join('/');
+
     if (debug && r < 5) console.log(`  round ${r}: lvl ${st.level} hp ${st.hp}/${st.maxHp} mp ${st.mp}/${st.maxMp}, menu: ${menu?.slice(0,2).join('/')}`);
 
     // Heal: Mend (110) if badly hurt and affordable, else Heal (35), else item.
@@ -151,16 +170,39 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debu
       }
     }
 
-    if (menu.some((o) => /^fight/i.test(o))) { await g.pick('Fight'); await g.wait(280); continue; }
-    if (menu.some((o) => /^run/i.test(o))) { await g.pick('Run'); await g.wait(280); continue; }
+    // Try Fight action; if menu has Fight, pick it or fall through to the fallback handler.
+    if (menu.some((o) => /^fight/i.test(o))) {
+      try {
+        await g.pick('Fight');
+        await g.wait(280);
+        continue;
+      } catch (e) {
+        if (debug) console.log(`  pick('Fight') failed: ${e.message}`);
+      }
+    }
+    if (menu.some((o) => /^run/i.test(o))) {
+      try {
+        await g.pick('Run');
+        await g.wait(280);
+        continue;
+      } catch (e) {
+        if (debug) console.log(`  pick('Run') failed: ${e.message}`);
+      }
+    }
 
     // An unrecognised menu is almost always a target or confirm prompt. Take
     // the first entry rather than waiting for a command that will never come.
     if (++unknown <= 40) {
       onStuck(menu);
-      await g.pick(menu[0].split(/\s+/)[0]);
-      await g.wait(300);
-      continue;
+      try {
+        const firstOption = menu[0].split(/\s+/)[0];
+        if (debug && unknown <= 3) console.log(`  fallback pick('${firstOption}') for menu: ${menu.join('/')}`);
+        await g.pick(firstOption);
+        await g.wait(300);
+        continue;
+      } catch (e) {
+        if (debug) console.log(`  fallback pick failed: ${e.message}`);
+      }
     }
     await g.wait(180);
   }

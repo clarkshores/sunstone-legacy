@@ -91,7 +91,7 @@ export async function fightBattle(g, { maxRounds = 120 } = {}) {
 }
 
 // Walk to a tile, fighting anything that interrupts. Returns true if arrived.
-export async function goTo(g, x, y, { tries = 14, settle = 130 } = {}) {
+export async function goTo(g, x, y, { tries = 14, settle = 70 } = {}) {
   for (let t = 0; t < tries; t++) {
     if ((await g.scene()) === 'Battle') { await fightBattle(g); await drain(g); continue; }
     await drain(g, 10);

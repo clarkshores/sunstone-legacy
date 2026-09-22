@@ -45,42 +45,100 @@ try {
   check('town exit reaches the overworld', (await g.mapId()) === 'overworld');
 
   // ---- Phase 4: grind to boss readiness -----------------------------------
-  const TARGET_LEVEL = Number(process.env.TARGET_LEVEL ?? 12);
+  // Long routes: one walkTo covering many tiles triggers far more encounters
+  // per call than short hops, and spends less time in polling overhead.
+  const TARGET_LEVEL = Number(process.env.TARGET_LEVEL ?? 11);
   const TARGET_GOLD = Number(process.env.TARGET_GOLD ?? 1400);
-  const spots = [[10, 10], [14, 13], [11, 16], [16, 11]];
-  let laps = 0, healed = 0;
+  const route = [[10, 10], [10, 24], [26, 24], [26, 10]];
+  let laps = 0, healed = 0, lastLog = 0;
 
   while (!overBudget()) {
     st = await g.state();
     if (st.level >= TARGET_LEVEL && st.gold >= TARGET_GOLD) break;
 
     if (st.hp <= st.maxHp * 0.35) {
-      // rest at the Ardent inn: 8 gold, full heal, autosave
-      if ((await g.mapId()) === 'overworld') { await goTo(g, 10, 9); await g.wait(1500); await drain(g); }
+      if ((await g.mapId()) === 'overworld') { await goTo(g, 10, 9); await g.wait(1400); await drain(g); }
       if ((await g.mapId()) === 'ardent') {
         await goTo(g, 18, 14);
         await interact(g, 'innkeep');
         const m = await g.menu();
-        if (m?.some((o) => /yes/i.test(o))) { await g.pick('Yes'); await g.wait(1200); await drain(g); }
+        if (m?.some((o) => /yes/i.test(o))) { await g.pick('Yes'); await g.wait(1100); await drain(g); }
         healed++;
-        await goTo(g, 12, 20); await g.wait(1500); await drain(g);
+        await goTo(g, 12, 20); await g.wait(1400); await drain(g);
       }
       continue;
     }
 
-    const spot = spots[laps % spots.length];
+    if ((await g.mapId()) !== 'overworld') { await goTo(g, 12, 20); await g.wait(1400); await drain(g); }
+    const spot = route[laps % route.length];
     await goTo(g, spot[0], spot[1], { tries: 2 });
     if ((await g.scene()) === 'Battle') { await fightBattle(g); await drain(g); }
     laps++;
-    if (laps % 10 === 0) {
+    if (Date.now() - lastLog > 60000) {
+      lastLog = Date.now();
       st = await g.state();
-      log(`  grinding: lvl ${st.level} hp ${st.hp}/${st.maxHp} gold ${st.gold} xp ${st.xp} (inn rests ${healed})`);
+      log(`  grinding: lvl ${st.level} hp ${st.hp}/${st.maxHp} gold ${st.gold} xp ${st.xp} (rests ${healed})`);
     }
   }
   st = await g.state();
   check(`reaches level ${TARGET_LEVEL}`, st.level >= TARGET_LEVEL, `level ${st.level}, xp ${st.xp}`);
   check('earns the Millbrook kit budget', st.gold >= TARGET_GOLD, `gold ${st.gold}`);
-  log('telemetry so far:', JSON.stringify(await g.telemetryTypes()));
+
+  // ---- Phase 5: Millbrook, buy the kit ------------------------------------
+  if ((await g.mapId()) !== 'overworld') { await goTo(g, 12, 20); await g.wait(1400); await drain(g); }
+  await goTo(g, 15, 26); await g.wait(1800); await drain(g);
+  log('map:', await g.mapId(), 'entities:', JSON.stringify(await g.entities()));
+  log('portals:', JSON.stringify(await g.ev(() => window.__rpg.world?.map?.portals ?? null)));
+  check('reaches Millbrook', (await g.mapId()) === 'millbrook', `map ${await g.mapId()}`);
+
+  const ents = await g.entities();
+  const shop = ents.find((e) => /shop|merchant|store|keep/i.test(e) && !/inn/i.test(e));
+  if (shop) {
+    const spot = await g.ev((id) => {
+      const e = window.__rpg.world.entities.find((x) => x.def.id === id);
+      return e ? { x: e.def.x, y: e.def.y } : null;
+    }, shop);
+    log('shop', shop, 'at', JSON.stringify(spot));
+    if (spot) {
+      await goTo(g, spot.x, spot.y + 1);
+      await g.tap(shop); await g.wait(900); await drain(g, 6);
+      log('shop menu:', JSON.stringify(await g.menu()));
+      if (await g.pick('Buy')) {
+        await g.wait(700);
+        for (const want of ['Iron Blade', 'Chain Mail', 'Iron Shield']) {
+          const items = (await g.menu()) ?? [];
+          const hit = items.find((o) => o.toLowerCase().startsWith(want.toLowerCase()));
+          log(`  buy ${want}:`, hit ? 'offered' : `not in [${items.join(' | ')}]`);
+          if (hit) {
+            await g.pick(want); await g.wait(700);
+            const conf = await g.menu();
+            if (conf?.some((o) => /yes/i.test(o))) { await g.pick('Yes'); await g.wait(800); }
+            await drain(g, 8);
+          }
+        }
+        await g.cancel(); await g.wait(400); await g.cancel(); await g.wait(400);
+      }
+      await drain(g);
+      st = await g.state();
+      log('after shopping:', JSON.stringify({ gold: st.gold, equip: st.equip }));
+      check('equips the Millbrook kit', st.equip.weapon === 'iron' && st.equip.armor === 'chain' && st.equip.shield === 'ironshield',
+            JSON.stringify(st.equip));
+    }
+  } else {
+    check('finds the Millbrook shop', false, `entities ${JSON.stringify(ents)}`);
+  }
+
+  // ---- Phase 6: the Whispering Cave ---------------------------------------
+  await goTo(g, 9, 15); await g.wait(1600); await drain(g);   // millbrook exit
+  if ((await g.mapId()) !== 'overworld') {
+    log('millbrook exit did not land on the overworld; map is', await g.mapId());
+    log('portals:', JSON.stringify(await g.ev(() => window.__rpg.world?.map?.portals ?? null)));
+  }
+  await goTo(g, 32, 9); await g.wait(1800); await drain(g);
+  log('map:', await g.mapId(), 'pos', JSON.stringify(await g.pos()));
+  log('entities:', JSON.stringify(await g.entities()));
+  log('portals:', JSON.stringify(await g.ev(() => window.__rpg.world?.map?.portals ?? null)));
+  check('enters the Whispering Cave', (await g.mapId()) === 'cave1', `map ${await g.mapId()}`);
 
   log('SUMMARY', JSON.stringify(results.map((r) => [r.ok ? 'PASS' : 'FAIL', r.name])));
 } catch (err) {

@@ -97,7 +97,8 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
     const frac = st.hp / st.maxHp;
 
     // Heal: Mend (110) if badly hurt and affordable, else Heal (35), else item.
-    if (frac <= 0.5 && menu.some((o) => /^spell/i.test(o))) {
+    // Only attempt if we have MP to cast; skip entirely if maxMp is 0.
+    if (frac <= 0.5 && st.maxMp > 0 && menu.some((o) => /^spell/i.test(o))) {
       if (await g.pick('Spell')) {
         await g.wait(260);
         const spells = (await g.menu()) ?? [];
@@ -111,6 +112,7 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
           continue;
         }
         await g.cancel(); await g.wait(200);
+        continue;
       }
     }
     if (frac <= 0.45 && menu.some((o) => /^item/i.test(o))) {
@@ -125,6 +127,7 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
           continue;
         }
         await g.cancel(); await g.wait(200);
+        continue;
       }
     }
 
@@ -141,6 +144,7 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
           continue;
         }
         await g.cancel(); await g.wait(200);
+        continue;
       }
     }
 

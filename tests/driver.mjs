@@ -136,10 +136,12 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {
       if (await g.pick('Spell')) {
         await g.wait(260);
         const spells = (await g.menu()) ?? [];
+        const spark = spells.find((o) => /^spark/i.test(o));
         const blaze = spells.find((o) => /^blaze/i.test(o));
-        if (blaze) {
-          await g.pick('Blaze');
-          await chooseTargetIfPrompted(g, 'blaze');
+        const want = blaze ?? spark;
+        if (want) {
+          await g.pick(want.split(' ')[0]);
+          await chooseTargetIfPrompted(g, 'offence');
           await g.wait(320);
           continue;
         }

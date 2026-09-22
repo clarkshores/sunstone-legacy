@@ -77,9 +77,25 @@ async function buy(where, wants) {
 // Grind on whichever map we are standing on, resting when hurt.
 async function grind({ level, gold, where, route, restAt, label }) {
   let laps = 0, rests = 0, lastLog = 0;
+  // Stall guard: a grind that stops earning is a harness bug, not slow luck.
+  // Fail fast and say so rather than spending the whole budget spinning.
+  let mark = { xp: -1, gold: -1, at: Date.now() };
+  const STALL_MS = 240000;
+
   while (!overBudget()) {
     const st = await g.state();
     if (st.level >= level && st.gold >= gold) break;
+
+    if (st.xp !== mark.xp || st.gold !== mark.gold) {
+      mark = { xp: st.xp, gold: st.gold, at: Date.now() };
+    } else if (Date.now() - mark.at > STALL_MS) {
+      const menu = await g.menu();
+      throw new Error(
+        `${label} stalled: no xp or gold for ${Math.round(STALL_MS / 1000)}s at lvl ${st.level} ` +
+        `xp ${st.xp} gold ${st.gold}, scene ${await g.scene()}, map ${await g.mapId()}, ` +
+        `menu ${JSON.stringify(menu)}`,
+      );
+    }
 
     if (st.hp <= st.maxHp * 0.35) {
       if (await rest(restAt)) rests++;
@@ -90,7 +106,10 @@ async function grind({ level, gold, where, route, restAt, label }) {
 
     const spot = route[laps % route.length];
     await goTo(g, spot[0], spot[1], { tries: 2 });
-    if ((await g.scene()) === 'Battle') { await fightBattle(g); await drain(g); }
+    if ((await g.scene()) === 'Battle') {
+      await fightBattle(g, { onStuck: (m) => log(`    unrecognised battle menu: ${JSON.stringify(m)}`) });
+      await drain(g);
+    }
     laps++;
     if (Date.now() - lastLog > 90000) {
       lastLog = Date.now();

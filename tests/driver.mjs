@@ -68,7 +68,24 @@ export async function drain(g, max = 80) {
 // Ember Drake's fire ignores armor ("keep Mend ready and never let your HP
 // fall under half") and that Blaze is what cracks golems open. So: heal first
 // when hurt, then nuke, then swing.
-export async function fightBattle(g, { maxRounds = 200 } = {}) {
+const COMMANDS = /^(fight|spell|item|run|auto|defend)\b/i;
+
+// Spark, Blaze and Lull prompt for a target after they are chosen. Fight does
+// not — v0.13 made it commit against the first living enemy — so a loop that
+// only knows the command verbs sees the target list as an unrecognised menu
+// and stalls. Pick the first target.
+async function chooseTargetIfPrompted(g, why) {
+  await g.wait(260);
+  const m = await g.menu();
+  if (!m || !m.length) return false;
+  if (m.some((o) => COMMANDS.test(o))) return false;
+  await g.pick(m[0].split(/\s+/)[0]);
+  await g.wait(320);
+  return true;
+}
+
+export async function fightBattle(g, { maxRounds = 200, onStuck = () => {} } = {}) {
+  let unknown = 0;
   for (let r = 0; r < maxRounds; r++) {
     if ((await g.scene()) !== 'Battle') return 'ended';
     if (await g.advance()) { await g.wait(80); continue; }
@@ -87,7 +104,12 @@ export async function fightBattle(g, { maxRounds = 200 } = {}) {
         const mend = spells.find((o) => /^mend/i.test(o));
         const heal = spells.find((o) => /^heal/i.test(o));
         const want = (frac <= 0.35 && mend) ? mend : (heal ?? mend);
-        if (want) { await g.pick(want.split(' ')[0]); await g.wait(420); continue; }
+        if (want) {
+          await g.pick(want.split(' ')[0]);
+          await chooseTargetIfPrompted(g, 'heal');
+          await g.wait(320);
+          continue;
+        }
         await g.cancel(); await g.wait(200);
       }
     }
@@ -96,7 +118,12 @@ export async function fightBattle(g, { maxRounds = 200 } = {}) {
         await g.wait(260);
         const items = (await g.menu()) ?? [];
         const healer = items.find((o) => /potion/i.test(o)) ?? items.find((o) => /herb/i.test(o));
-        if (healer) { await g.pick(healer.split(' ')[0]); await g.wait(420); continue; }
+        if (healer) {
+          await g.pick(healer.split(' ')[0]);
+          await chooseTargetIfPrompted(g, 'item');
+          await g.wait(320);
+          continue;
+        }
         await g.cancel(); await g.wait(200);
       }
     }
@@ -107,13 +134,27 @@ export async function fightBattle(g, { maxRounds = 200 } = {}) {
         await g.wait(260);
         const spells = (await g.menu()) ?? [];
         const blaze = spells.find((o) => /^blaze/i.test(o));
-        if (blaze) { await g.pick('Blaze'); await g.wait(420); continue; }
+        if (blaze) {
+          await g.pick('Blaze');
+          await chooseTargetIfPrompted(g, 'blaze');
+          await g.wait(320);
+          continue;
+        }
         await g.cancel(); await g.wait(200);
       }
     }
 
     if (menu.some((o) => /^fight/i.test(o))) { await g.pick('Fight'); await g.wait(280); continue; }
     if (menu.some((o) => /^run/i.test(o))) { await g.pick('Run'); await g.wait(280); continue; }
+
+    // An unrecognised menu is almost always a target or confirm prompt. Take
+    // the first entry rather than waiting for a command that will never come.
+    if (++unknown <= 40) {
+      onStuck(menu);
+      await g.pick(menu[0].split(/\s+/)[0]);
+      await g.wait(300);
+      continue;
+    }
     await g.wait(180);
   }
   return 'maxRounds';

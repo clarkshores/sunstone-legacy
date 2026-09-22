@@ -63,31 +63,106 @@ export async function drain(g, max = 80) {
 }
 
 // Fight the current battle to its end. Returns a short result string.
-export async function fightBattle(g, { maxRounds = 120 } = {}) {
+//
+// Spell priority matters for the bosses: the Highmoor elder's hint says the
+// Ember Drake's fire ignores armor ("keep Mend ready and never let your HP
+// fall under half") and that Blaze is what cracks golems open. So: heal first
+// when hurt, then nuke, then swing.
+export async function fightBattle(g, { maxRounds = 200 } = {}) {
   for (let r = 0; r < maxRounds; r++) {
     if ((await g.scene()) !== 'Battle') return 'ended';
-    if (await g.advance()) { await g.wait(90); continue; }
+    if (await g.advance()) { await g.wait(80); continue; }
 
     const menu = await g.menu();
-    if (!menu) { await g.wait(180); continue; }
+    if (!menu) { await g.wait(150); continue; }
 
     const st = await g.state();
-    const low = st.hp <= st.maxHp * 0.35;
+    const frac = st.hp / st.maxHp;
 
-    if (low && menu.some((o) => /^item/i.test(o))) {
-      if (await g.pick('Item')) {
-        await g.wait(300);
-        const items = (await g.menu()) ?? [];
-        const healer = items.find((o) => /herb|potion/i.test(o));
-        if (healer) { await g.pick(healer.split(' ')[0]); await g.wait(500); continue; }
-        await g.cancel(); await g.wait(250);
+    // Heal: Mend (110) if badly hurt and affordable, else Heal (35), else item.
+    if (frac <= 0.5 && menu.some((o) => /^spell/i.test(o))) {
+      if (await g.pick('Spell')) {
+        await g.wait(260);
+        const spells = (await g.menu()) ?? [];
+        const mend = spells.find((o) => /^mend/i.test(o));
+        const heal = spells.find((o) => /^heal/i.test(o));
+        const want = (frac <= 0.35 && mend) ? mend : (heal ?? mend);
+        if (want) { await g.pick(want.split(' ')[0]); await g.wait(420); continue; }
+        await g.cancel(); await g.wait(200);
       }
     }
-    if (menu.some((o) => /^fight/i.test(o))) { await g.pick('Fight'); await g.wait(320); continue; }
-    if (menu.some((o) => /^run/i.test(o))) { await g.pick('Run'); await g.wait(320); continue; }
-    await g.wait(200);
+    if (frac <= 0.45 && menu.some((o) => /^item/i.test(o))) {
+      if (await g.pick('Item')) {
+        await g.wait(260);
+        const items = (await g.menu()) ?? [];
+        const healer = items.find((o) => /potion/i.test(o)) ?? items.find((o) => /herb/i.test(o));
+        if (healer) { await g.pick(healer.split(' ')[0]); await g.wait(420); continue; }
+        await g.cancel(); await g.wait(200);
+      }
+    }
+
+    // Offence: Blaze when it is available and worth the MP.
+    if (st.mp >= 7 && menu.some((o) => /^spell/i.test(o))) {
+      if (await g.pick('Spell')) {
+        await g.wait(260);
+        const spells = (await g.menu()) ?? [];
+        const blaze = spells.find((o) => /^blaze/i.test(o));
+        if (blaze) { await g.pick('Blaze'); await g.wait(420); continue; }
+        await g.cancel(); await g.wait(200);
+      }
+    }
+
+    if (menu.some((o) => /^fight/i.test(o))) { await g.pick('Fight'); await g.wait(280); continue; }
+    if (menu.some((o) => /^run/i.test(o))) { await g.pick('Run'); await g.wait(280); continue; }
+    await g.wait(180);
   }
   return 'maxRounds';
+}
+
+// The portal graph, read out of the bundle's own map definitions.
+export const PORTALS = {
+  ardent: { overworld: [12, 20] },
+  overworld: { ardent: [10, 9], cave1: [32, 9], millbrook: [15, 26], north: [12, 1] },
+  millbrook: { overworld: [9, 15] },
+  cave1: { overworld: [1, 1], cave2: [22, 18] },
+  cave2: { cave1: [1, 1] },
+  north: { overworld: [24, 26], highmoor: [22, 8], peak1: [30, 1] },
+  highmoor: { north: [11, 15] },
+  peak1: { north: [1, 1], peak2: [22, 18] },
+  peak2: { peak1: [1, 1] },
+};
+
+function routeBetween(from, to) {
+  const seen = new Set([from]);
+  const queue = [[from, []]];
+  while (queue.length) {
+    const [at, path] = queue.shift();
+    if (at === to) return path;
+    for (const next of Object.keys(PORTALS[at] ?? {})) {
+      if (seen.has(next)) continue;
+      seen.add(next);
+      queue.push([next, [...path, [at, next]]]);
+    }
+  }
+  return null;
+}
+
+// Travel to another map, taking portals in order and fighting what interrupts.
+export async function travelTo(g, target, { log = () => {} } = {}) {
+  for (let hop = 0; hop < 12; hop++) {
+    const here = await g.mapId();
+    if (here === target) return true;
+    const route = routeBetween(here, target);
+    if (!route || !route.length) return false;
+    const [, next] = route[0];
+    const [px, py] = PORTALS[here][next];
+    log(`    travel ${here} -> ${next} via (${px},${py})`);
+    await goTo(g, px, py);
+    await g.wait(1500);
+    await drain(g);
+    if ((await g.scene()) === 'Battle') { await fightBattle(g); await drain(g); }
+  }
+  return (await g.mapId()) === target;
 }
 
 // Walk to a tile, fighting anything that interrupts. Returns true if arrived.

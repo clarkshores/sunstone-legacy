@@ -97,7 +97,7 @@ async function grind({ level, gold, where, route, restAt, label }) {
       );
     }
 
-    if (st.hp <= st.maxHp * 0.35) {
+    if (st.hp <= st.maxHp * 0.50 || st.mp === 0) {
       if (await rest(restAt)) rests++;
       await travelTo(g, where, { log });
       continue;

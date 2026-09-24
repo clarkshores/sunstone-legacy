@@ -172,8 +172,10 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debu
 
     // Try Fight action; if menu has Fight, pick it or fall through to the fallback handler.
     if (menu.some((o) => /^fight/i.test(o))) {
+      if (debug) console.log(`  trying pick('Fight')`);
       try {
-        await g.pick('Fight');
+        const result = await g.pick('Fight');
+        if (debug) console.log(`  pick('Fight') returned: ${result}`);
         await g.wait(280);
         continue;
       } catch (e) {
@@ -181,8 +183,10 @@ export async function fightBattle(g, { maxRounds = 200, onStuck = () => {}, debu
       }
     }
     if (menu.some((o) => /^run/i.test(o))) {
+      if (debug) console.log(`  trying pick('Run')`);
       try {
-        await g.pick('Run');
+        const result = await g.pick('Run');
+        if (debug) console.log(`  pick('Run') returned: ${result}`);
         await g.wait(280);
         continue;
       } catch (e) {

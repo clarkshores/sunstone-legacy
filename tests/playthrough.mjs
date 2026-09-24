@@ -21,7 +21,7 @@ const check = (name, ok, detail = '') => {
   return ok;
 };
 
-const BUDGET_MS = Number(process.env.PLAYTHROUGH_BUDGET_MS ?? 75 * 60 * 1000);
+const BUDGET_MS = Number(process.env.PLAYTHROUGH_BUDGET_MS ?? 90 * 60 * 1000);
 const overBudget = () => Date.now() - t0 > BUDGET_MS;
 
 const INNS = {

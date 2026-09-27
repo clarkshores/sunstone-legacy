@@ -41,8 +41,16 @@ Publishing an older build to that URL erases the newer one with no undo.
    raises a pulsing red title warning and emits a `build_regression` telemetry
    event, and never lowers the high-water mark.
 
-All three run in CI on every push (`.github/workflows/verify.yml`), including a
-negative test that a synthetic 0.7.0 build is blocked.
+All three run in CI on every push (`.github/workflows/verify.yml`), with
+negative tests for every regression the gate exists to catch: an older build, a
+bundle with no build id, an ambiguous build id, and an edit that never bumped
+its id. CI also rebuilds the deploy output and checks it byte for byte against
+the manifest.
+
+The gate was reconciled on 21 Sep against the original 2026-09-16 handoff
+script, recovered from Drive and kept verbatim at `docs/port/original/`. It
+diverges in one place — an equal-ranked build whose bytes differ is **blocked**
+rather than warned about. See that directory's README for the reasoning.
 
 ## Editing this file
 

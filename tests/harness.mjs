@@ -5,7 +5,7 @@
 // harness serves the pinned local copy of the same Phaser version instead.
 //
 // The ONLY edit to the bundle is that one script src. It is done in memory:
-// artifact/sunstone-v0.14.CANONICAL.html is never written to. The harness
+// artifact/sunstone-v0.15.CANONICAL.html is never written to. The harness
 // asserts the file's sha256 before serving and reports exactly what it changed.
 
 import { createServer } from 'node:http';

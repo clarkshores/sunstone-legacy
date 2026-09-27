@@ -193,3 +193,41 @@ pull requests have a base. This work is on `claude/wizardly-brown-fj78du`.
 2. Push the v0.7 TypeScript tree from the Drive mirror to preserve it, clearly
    marked as stale and off the critical path.
 3. Supabase project + keys, so the telemetry gate (Improvement 3) can be closed.
+
+---
+
+# Handoff — v0.15.0 (27 Sep 2026)
+
+## 1. What changed and why
+Pulled the live artifact (`https://claude.ai/artifact/1dXVYs83AjdmVj8S4DZq8w`); it was byte-identical to
+`artifact/sunstone-v0.14.CANONICAL.html` (sha256 `9d97eaa7…`). Patched a copy into
+`artifact/sunstone-v0.15.CANONICAL.html`, build id `0.15.0-artifact`. The v0.14 file is kept verbatim.
+
+Graphics:
+1. **World hero drop shadow** — soft ellipse under the hero, tweened with each step.
+2. **Battle ground shadows** — each enemy stands on a shadow that breathes with its idle bob.
+3. **Defeat burst** — 14 sparks fly out when an enemy falls; its shadow fades with it.
+
+Gameplay / platform:
+4. **Critical-HP warning** — one toast per battle when HP drops to 25% ("Heal with Item or Spell, or Run"); re-arms after healing above 25%.
+5. **Haptic pulse on hit** — `navigator.vibrate` where supported (Android; iOS Safari ignores it), off when Sound is off.
+6. **SFX audio context suspended while hidden** — music was already stopped on `visibilitychange`, but the SFX
+   AudioContext kept running; it is now suspended and resumed with the page.
+
+Durable decision: the manifest floor is now **0.15.0**, so the old v0.14 file can no longer be cleared for
+publishing. `MANIFEST.json` records v0.14 under `previous`. CI, `vercel.json`, `package.json` and the test harness
+point at the v0.15 file.
+
+## 2. Checks
+- JS syntax check of the patched bundle: clean.
+- `verify-manifest`: ok. Publish gate: v0.15 cleared; older, v0.14-id, the live v0.14 file, no-id and unbumped-edit
+  candidates all blocked; 0.16 cleared (every CI gate case replayed locally).
+- Bot playthrough with a shortened 8-min budget: 4/7. It reached level 8 across dozens of battles with **no page
+  errors**. The 3 failures (boss level, iron kit, run completion) came from the cut budget and the timeout kill, not
+  from the new code. The full 90-min playthrough was not re-run.
+- Screenshots of all three graphics changes were reviewed in headless Chromium.
+- Not verified: haptics and audio suspend on a real device.
+
+## 3. Next action for Zero
+Review the PR. After merge, publish `artifact/sunstone-v0.15.CANONICAL.html` to the artifact URL (the gate clears it).
+The live URL is still v0.14 — this session did not publish.

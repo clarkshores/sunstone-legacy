@@ -15,7 +15,7 @@ It exits non-zero if any phase fails and prints a transcript as it plays.
 
 ## What it plays against
 
-The canonical bundle itself — `artifact/sunstone-v0.14.CANONICAL.html` — not a
+The canonical bundle itself — `artifact/sunstone-v0.15.CANONICAL.html` — not a
 rebuild of it. `harness.mjs` checks the file's sha256 against
 `artifact/MANIFEST.json` before serving and refuses to run if it has drifted.
 

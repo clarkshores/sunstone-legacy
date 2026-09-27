@@ -18,11 +18,11 @@ jobs:
         run: node tools/verify-manifest.mjs
 
       - name: Publish gate clears the canonical bundle
-        run: node tools/verify-before-publish.mjs artifact/sunstone-v0.14.CANONICAL.html
+        run: node tools/verify-before-publish.mjs artifact/sunstone-v0.15.CANONICAL.html
 
       - name: Publish gate refuses the regressions it exists to catch
         run: |
-          C=artifact/sunstone-v0.14.CANONICAL.html
+          C=artifact/sunstone-v0.15.CANONICAL.html
           T=$(mktemp -d)
 
           expect_rc() {
@@ -38,7 +38,7 @@ jobs:
             echo "ok: $label (rc $got)"
           }
 
-          sed 's/"0\.14\.0-artifact"/"0.7.0-artifact"/' "$C" > "$T/old.html"
+          sed 's/"0\.15\.0-artifact"/"0.7.0-artifact"/' "$C" > "$T/old.html"
           expect_rc 1 "an older build is blocked" "$T/old.html"
 
           printf '<html>no build id</html>' > "$T/none.html"
@@ -50,13 +50,13 @@ jobs:
           cp "$C" "$T/unbumped.html"; printf '<!--edit-->' >> "$T/unbumped.html"
           expect_rc 1 "an edit that did not bump its build id is blocked" "$T/unbumped.html"
 
-          sed 's/"0\.14\.0-artifact"/"0.15.0-artifact"/' "$C" > "$T/new.html"
+          sed 's/"0\.15\.0-artifact"/"0.16.0-artifact"/' "$C" > "$T/new.html"
           expect_rc 0 "a newer build is cleared" "$T/new.html"
 
       - name: Deploy build reproduces the canonical bundle byte for byte
         run: |
           node tools/verify-manifest.mjs && mkdir -p public \
-            && cp artifact/sunstone-v0.14.CANONICAL.html public/index.html
+            && cp artifact/sunstone-v0.15.CANONICAL.html public/index.html
           a=$(sha256sum public/index.html | cut -d' ' -f1)
           b=$(node -e "console.log(require('./artifact/MANIFEST.json').canonical.sha256)")
           [ "$a" = "$b" ] || { echo "FAIL: deploy output $a != manifest $b"; exit 1; }

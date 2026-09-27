@@ -1,6 +1,6 @@
 {
   "name": "sunstone-legacy",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "private": true,
   "type": "module",
   "description": "Packaging and verification for the canonical Sunstone Legacy build artifact.",
@@ -8,7 +8,7 @@
     "verify": "node tools/verify-manifest.mjs",
     "gate": "node tools/verify-before-publish.mjs",
     "playthrough": "node tests/playthrough.mjs",
-    "build": "node tools/verify-manifest.mjs && mkdir -p public && cp artifact/sunstone-v0.14.CANONICAL.html public/index.html"
+    "build": "node tools/verify-manifest.mjs && mkdir -p public && cp artifact/sunstone-v0.15.CANONICAL.html public/index.html"
   },
   "devDependencies": {
     "phaser": "3.80.1",
